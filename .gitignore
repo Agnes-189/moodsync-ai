@@ -1,0 +1,11 @@
+# Environments & Secrets
+venv/
+.env
+__pycache__/
+*.py[cod]
+
+# Local Database & ML Artifacts
+instance/
+*.db
+*.sqlite3
+saved_models/
