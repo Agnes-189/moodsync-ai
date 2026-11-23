@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="dashboard">
+    <h1>{{ title }}</h1>
+    
+    {% if not is_favorites_page %}
+    <form action="{{ url_for('main.search') }}" method="GET" class="search-bar">
+        <input type="text" name="q" class="form-control" placeholder="Search tracks, artists, or genres..." value="{{ search_query or '' }}">
+        <button type="submit" class="btn" style="width: auto; padding: 0 2rem;">Search</button>
+    </form>
+
+    <div class="categories-nav">
+        <a href="{{ url_for('main.home') }}" class="category-pill {% if not active_category %}active{% endif %}">All</a>
+        {% for cat in categories %}
+            <a href="{{ url_for('main.category_filter', category_id=cat.id) }}" 
+               class="category-pill {% if active_category and active_category.id == cat.id %}active{% endif %}">
+               {{ cat.name }}
+            </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if songs %}
+        <div class="music-grid">
+            {% for song in songs %}
+            <div class="music-card">
+                <img src="{{ song.cover_art }}" alt="Cover for {{ song.title }}" class="card-img">
+                <div class="card-content">
+                    <h3 class="card-title">{{ song.title }}</h3>
+                    <p class="card-artist">{{ song.artist }} &bull; {{ song.genre }}</p>
+                    <div class="card-actions">
+                        <a href="{{ song.external_url }}" target="_blank" rel="noopener noreferrer" class="play-link">Listen External &rarr;</a>
+                        
+                        <form action="{{ url_for('main.toggle_favorite', song_id=song.id) }}" method="POST" style="margin:0;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            {% if song.id in user_fav_ids %}
+                                <button type="submit" class="fav-btn active">★ Saved</button>
+                            {% else %}
+                                <button type="submit" class="fav-btn">☆ Save</button>
+                            {% endif %}
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p style="color: var(--text-muted);">No music found in this section yet.</p>
+    {% endif %}
+</div>
+{% endblock %}
