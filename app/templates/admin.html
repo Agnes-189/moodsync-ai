@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard">
+    <h1>Admin Catalog Manager</h1>
+    <p style="color: var(--text-muted); margin-bottom: 2rem;">
+        Upload MP3/WAV/OGG audio files for direct in-app streaming, or batch import tracks via CSV.
+    </p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 2rem; margin-bottom: 3rem;">
+        <!-- Add Single Song + Upload Audio -->
+        <div class="auth-container" style="margin: 0; max-width: 100%;">
+            <h2 style="margin-top: 0;">Add Track & Upload Audio</h2>
+            <form method="POST" action="{{ url_for('admin.catalog_manager') }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="single">
+
+                <div class="form-group">
+                    <label for="title">Track Title *</label>
+                    <input type="text" id="title" name="title" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="artist">Artist *</label>
+                    <input type="text" id="artist" name="artist" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="category_id">Category *</label>
+                    <select id="category_id" name="category_id" class="form-control" required>
+                        {% for cat in categories %}
+                            <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="genre">Genre</label>
+                    <input type="text" id="genre" name="genre" class="form-control" placeholder="e.g., Afrobeat, Amapiano, R&B">
+                </div>
+
+                <div class="form-group">
+                    <label for="mood_tags">Mood Tags (comma-separated)</label>
+                    <input type="text" id="mood_tags" name="mood_tags" class="form-control" placeholder="e.g., happy, upbeat, party">
+                </div>
+
+                <div class="form-group">
+                    <label for="audio_file">Upload Audio File (MP3 / WAV / OGG)</label>
+                    <input type="file" id="audio_file" name="audio_file" class="form-control" accept=".mp3,.wav,.ogg,.m4a">
+                </div>
+
+                <div class="form-group">
+                    <label for="duration">Duration</label>
+                    <input type="text" id="duration" name="duration" class="form-control" placeholder="e.g., 3:24">
+                </div>
+
+                <div class="form-group">
+                    <label for="cover_art">Cover Art URL</label>
+                    <input type="url" id="cover_art" name="cover_art" class="form-control" placeholder="https://...">
+                </div>
+
+                <div class="form-group">
+                    <label for="external_url">Fallback External URL (optional)</label>
+                    <input type="url" id="external_url" name="external_url" class="form-control" placeholder="https://...">
+                </div>
+
+                <button type="submit" class="btn">Save & Publish Track</button>
+            </form>
+        </div>
+
+        <!-- CSV Batch Importer -->
+        <div class="auth-container" style="margin: 0; max-width: 100%; align-self: start;">
+            <h2 style="margin-top: 0;">Batch Import via CSV</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">
+                Columns supported: <code>title, artist, category, genre, song_type, duration, cover_art, audio_file, external_url, provider, mood_tags</code>
+            </p>
+            <form method="POST" action="{{ url_for('admin.catalog_manager') }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="csv">
+                <div class="form-group">
+                    <label for="csv_file">Select CSV File</label>
+                    <input type="file" id="csv_file" name="csv_file" class="form-control" accept=".csv" required>
+                </div>
+                <button type="submit" class="btn">Import CSV Catalog</button>
+            </form>
+        </div>
+    </div>
+
+    <h2>Current Catalog ({{ songs | length }} Tracks)</h2>
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; background: var(--bg-card); border-radius: 8px; overflow: hidden;">
+            <thead>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left;">
+                    <th style="padding: 0.9rem;">Title</th>
+                    <th style="padding: 0.9rem;">Artist</th>
+                    <th style="padding: 0.9rem;">Category</th>
+                    <th style="padding: 0.9rem;">Mood Tags</th>
+                    <th style="padding: 0.9rem;">Source</th>
+                    <th style="padding: 0.9rem;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for song in songs %}
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 0.9rem;">{{ song.title }}</td>
+                    <td style="padding: 0.9rem; color: var(--text-muted);">{{ song.artist }}</td>
+                    <td style="padding: 0.9rem;">{{ song.category.name if song.category else '-' }}</td>
+                    <td style="padding: 0.9rem; font-size: 0.85rem; color: var(--accent-violet);">{{ song.mood_tags or '-' }}</td>
+                    <td style="padding: 0.9rem; font-size: 0.85rem;">
+                        {% if song.audio_file %}
+                            <span style="color: #10b981; font-weight: bold;">● In-App Stream</span>
+                        {% elif song.external_url %}
+                            <span style="color: var(--text-muted);">External Link</span>
+                        {% else %}
+                            <span style="color: #f59e0b;">No Audio</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 0.9rem;">
+                        <form action="{{ url_for('admin.delete_song', song_id=song.id) }}" method="POST" style="margin:0;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="fav-btn" style="color: #ef4444; border-color: #ef4444;">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
