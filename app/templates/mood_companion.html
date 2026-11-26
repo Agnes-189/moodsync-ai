@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard">
+    <h1>AI Mood Companion</h1>
+    <p style="color: var(--text-muted); max-width: 650px; margin-bottom: 1.5rem;">
+        Describe how you're feeling or what kind of moment you're in. Our NLP classifier detects your mood, logs it to your journal, and streams matching music live online.
+    </p>
+
+    <div class="auth-container" style="margin: 0 0 2.5rem 0; max-width: 650px;">
+        <form method="POST" action="{{ url_for('main.mood_companion') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group">
+                <label for="mood_text">How are you feeling right now?</label>
+                <input type="text" id="mood_text" name="mood_text" class="form-control" 
+                       placeholder="e.g., Feeling hyped for a night out, or stressed after work..." 
+                       value="{{ mood_input }}" required>
+            </div>
+            <button type="submit" class="btn">Analyze Mood & Stream Music</button>
+        </form>
+    </div>
+
+    {% if result %}
+        <div style="background: var(--bg-card); border-left: 4px solid var(--accent-pink); padding: 1.25rem 1.5rem; border-radius: 8px; margin-bottom: 2rem; max-width: 800px;">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                <span style="text-transform: uppercase; font-weight: bold; color: var(--accent-pink); font-size: 1.1rem;">
+                    Detected Mood: {{ result.mood }}
+                </span>
+                {% if result.confidence %}
+                    <span style="background: rgba(139, 92, 246, 0.2); color: var(--accent-violet); padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.8rem;">
+                        {{ result.confidence }}% confidence
+                    </span>
+                {% endif %}
+            </div>
+            <p style="margin: 0 0 0.5rem 0; color: var(--text-main);">{{ result.explanation }}</p>
+            <small style="color: var(--text-muted);">
+                Matched Vibes: {{ result.matched_categories | join(', ') }}
+            </small>
+        </div>
+
+        <h2>Live Streams For Your {{ result.mood | capitalize }} Vibe</h2>
+        {% if result.online_tracks %}
+            <div class="music-grid" style="margin-bottom: 3rem;">
+                {% for track in result.online_tracks %}
+                <div class="music-card">
+                    <img src="{{ track.cover_art }}" alt="Cover for {{ track.title }}" class="card-img">
+                    <div class="card-content">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--accent-violet); margin-bottom: 0.25rem; text-transform: uppercase;">
+                            <span>{{ track.genre }}</span>
+                            <span>{{ track.duration }}</span>
+                        </div>
+                        <h3 class="card-title">{{ track.title }}</h3>
+                        <p class="card-artist" style="margin-bottom: 0.75rem;">{{ track.artist }}</p>
+
+                        <div class="card-actions">
+                            <button type="button" class="btn" style="padding: 0.4rem 0.9rem; font-size: 0.85rem;"
+                                    onclick="playTrack('{{ track.stream_url }}', '{{ track.title | e }}', '{{ track.artist | e }}', '{{ track.cover_art }}')">
+                                ▶ Stream Live
+                            </button>
+                            <a href="{{ track.external_url }}" target="_blank" rel="noopener noreferrer" class="play-link" style="font-size: 0.8rem;">
+                                Full Track &rarr;
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p style="color: var(--text-muted); margin-bottom: 2.5rem;">Could not reach the online music stream service right now. Check your internet connection and try again.</p>
+        {% endif %}
+    {% endif %}
+
+    <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 2.5rem 0;">
+
+    <h2>Your Mood Journal & Trends</h2>
+    {% if mood_counts %}
+        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.5rem;">
+            {% for mood, count in mood_counts.items() %}
+                <span style="background: var(--bg-card); border: 1px solid var(--accent-violet); padding: 0.4rem 0.9rem; border-radius: 20px; font-size: 0.85rem;">
+                    <strong style="color: var(--accent-pink); text-transform: capitalize;">{{ mood }}</strong>: {{ count }}
+                </span>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if recent_entries %}
+        <div style="display: flex; flex-direction: column; gap: 0.75rem; max-width: 800px;">
+            {% for entry in recent_entries %}
+                <div style="background: var(--bg-card); padding: 0.9rem 1.25rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                    <div>
+                        <p style="margin: 0 0 0.25rem 0; color: var(--text-main);">"{{ entry.mood_text }}"</p>
+                        <small style="color: var(--text-muted);">{{ entry.timestamp.strftime('%b %d, %Y at %H:%M UTC') }}</small>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="background: rgba(236, 72, 153, 0.15); color: var(--accent-pink); padding: 0.25rem 0.7rem; border-radius: 12px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">
+                            {{ entry.predicted_mood }}
+                        </span>
+                        {% if entry.confidence_score %}
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">{{ entry.confidence_score }}%</div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p style="color: var(--text-muted);">No mood check-ins recorded yet. Share how you feel above to start your journal!</p>
+    {% endif %}
+</div>
+{% endblock %}
